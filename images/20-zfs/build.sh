@@ -103,6 +103,10 @@ cd /dist
 cp -r /dist/arch/lib/modules/${KERNEL_VERSION}/extra /lib/modules/${KERNEL_VERSION}/
 depmod
 
+./scripts/zfs-helpers.sh -i
+
+echo "----------------------------------------------------"
+
 cp /dist/Dockerfile.zfs-tools /dist/arch/Dockerfile
 cp /dist/entry.sh /dist/arch/
 
