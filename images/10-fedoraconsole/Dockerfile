@@ -20,5 +20,5 @@ RUN dnf install -y iptables openssh-server rsync sudo vim-minimal \
     && cat /etc/ssh/sshd_config > /etc/ssh/sshd_config.tpl \
     && cat /etc/ssh/sshd_config.append.tpl >> /etc/ssh/sshd_config.tpl \
     && rm -f /etc/ssh/sshd_config.append.tpl /etc/ssh/sshd_config \
-    && sed '0,/PermitRootLogin/{//d}' /etc/ssh/sshd_config > /etc/ssh/sshd_config
+    && sed '0,/PermitRootLogin/{//d}' /etc/ssh/sshd_config.tpl > /etc/ssh/sshd_config.tpl
 ENTRYPOINT ["/usr/bin/ros", "entrypoint"]
