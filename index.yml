@@ -16,6 +16,7 @@ services:
 - volume-efs
 - volume-nfs
 - modem-manager
+- multipathd
 - waagent
 - virtualbox-tools
 - pingan-amc
