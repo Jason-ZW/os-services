@@ -1,36 +1,46 @@
-FROM debian:stable-slim
-# FROM arm=skip arm64=skip
+FROM alpine:3.11.2 AS builder
 
-# net-tools for ifconfig, iproute for ip
-RUN apt-get update && apt-get install -y \
-	net-tools \
-	iproute2 \
-	sudo \
-	fuse \
-	libtirpc-common \
-	libdumbnet1 \
-	libfuse2 \
-	libffi6 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/*
+RUN apk --no-cache add alpine-sdk coreutils cmake \
+  && adduser -G abuild -g "Alpine Package Builder" -s /bin/ash -D builder \
+  && echo "builder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+  && mkdir /packages \
+  && chown builder:abuild /packages \
+  && mkdir -p /var/cache/apk \
+  && ln -s /var/cache/apk /etc/apk/cache
 
-COPY bin/ /usr/local/bin
-COPY lib/ /usr/local/lib
-COPY etc/ /etc
+COPY open-vm-tools/ /home/builder/package
 
-RUN mkdir -p /mnt/hgfs \
-	&& ln -s /usr/local/bin/* /usr/bin/ \
-	&& ldconfig
+USER builder
 
-ENV LD_LIBRARY_PATH /lib:/usr/local/lib
-ENV LIBRARY_PATH /lib:/usr/local/lib
+WORKDIR /home/builder/package
+
+RUN mkdir -p /home/builder/.abuild && \
+    abuild-keygen -a -i -n && \
+    abuild-apk update && \
+    sudo chown -R builder:abuild /home/builder/package && \
+    sudo chown -R builder:abuild /packages && \
+    abuild -r
+
+FROM alpine:3.11.2
+
+COPY --from=builder /home/builder/packages/builder/x86_64 /apk-ros/x86_64
+
+RUN apk update && \
+        # apk --no-cache add net-tools iproute2 sudo fuse && \
+        apk --no-cache add --repository /apk-ros open-vm-tools --allow-untrusted && \
+        mkdir -p /mnt/hgfs && \
+        rm -rf /apk-ros && \
+        rm /var/cache/apk/*
 
 ENTRYPOINT ["/usr/bin/ros", "entrypoint"]
 
-RUN addgroup --gid 1100 rancher && \
-    addgroup --gid 1101 docker && \
-    adduser -q -u 1100 --gid 1100 --shell /bin/bash rancher && \
-    adduser -q -u 1101 --gid 1101 --shell /bin/bash docker && \
+RUN addgroup -g 1100 rancher && \
+    addgroup -g 1101 docker && \
+    addgroup -S sudo && \
+    adduser -D -u 1100 -g rancher -G sudo -s /bin/bash rancher && \
+    adduser rancher docker && \
+    adduser -D -u 1101 -g docker -G sudo -s /bin/bash docker && \
+    adduser docker docker && \
     adduser docker sudo && \
     sed -i 's/rancher:!/rancher:*/g' /etc/shadow && \
     sed -i 's/docker:!/docker:*/g' /etc/shadow && \
